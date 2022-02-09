@@ -6,7 +6,7 @@ import raw_data
 
 app = Flask(__name__)
 
-app.config['SQLALCHEMY_DATABASE_URI']='sqlite:///:memory:?charset=utf-8'
+app.config['SQLALCHEMY_DATABASE_URI']='sqlite:///:memory:?charset=utf8'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS']=False
 app.config['JSON_AS_ASCII']=False
 db=SQLAlchemy(app)
@@ -100,13 +100,15 @@ for order_data in raw_data.orders:
     )
     db.session.add(new_order)
     db.session.commit()
+
 for offer_data in raw_data.offers:
     new_offer=Offer(
         id=offer_data['id'],
         order_id=offer_data["order_id"],
         executor_id=offer_data['executor_id']
     )
-
+    db.session.add(new_offer)
+    db.session.commit()
 
 
 @app.route("/users", methods=["GET", "POST"])
@@ -205,8 +207,11 @@ def orders(uid: int):
 @app.route("/offers", methods=["GET", "POST"])
 def all_offers():
     if request.method=="GET":
-        return json.dumps(Offer.query.get(uid).convert_to_dict()), 200, {
-            "Content-Type": "application/json; charset=utf-8"}
+        if request.method == "GET":
+            res = []
+            for u in Offer.query.all():
+                res.append(u.convert_to_dict())
+            return json.dumps(res), 200, {"Content-Type": "application/json; charset=utf-8"}
     elif request.method=="POST":
         offer_data = json.loads(request.data)
         new_offer = Offer(
